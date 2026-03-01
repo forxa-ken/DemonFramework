@@ -56,28 +56,28 @@ function DF:RegisterModule(name, definition)
     Assert(type(definition) == "table", "Module definition must be table")
     Assert(not self.Modules[name], "Module already registered: " .. name)
 
-    -- Se crea una instancia interna del módulo
     local module = {
         name = name,
         state = MODULE_STATE.REGISTERED,
         enabled = false,
-
-        -- Callbacks opcionales
-        OnLoad = definition.OnLoad,
-        OnEnable = definition.OnEnable,
-        OnDisable = definition.OnDisable,
     }
+
+    -- Copiar todos los campos definidos por el módulo
+    for key, value in pairs(definition) do
+        module[key] = value
+    end
+
     -- Método de log contextual por módulo
     module.Log = function(self, message, level)
 
-    level = level or "INFO"
+        level = level or "INFO"
+        local methodName = level:sub(1,1):upper() .. level:sub(2):lower()
 
-    local methodName = level:sub(1,1):upper() .. level:sub(2):lower()
-
-    if DF.Logger and DF.Logger[methodName] then
-        DF.Logger[methodName](DF.Logger, message, self.name)
+        if DF.Logger and DF.Logger[methodName] then
+            DF.Logger[methodName](DF.Logger, message, self.name)
+        end
     end
-end
+
     self.Modules[name] = module
 
     return module

@@ -30,3 +30,16 @@ function DF:Initialize()
         self:InitializeModules()
     end
 end
+
+-- ---------------------------------------------------------------------------
+-- Notificación de cambio de perfil
+-- ---------------------------------------------------------------------------
+function DF:NotifyProfileChanged()
+
+    for _, module in pairs(self.Modules) do
+        if type(module.OnProfileChanged) == "function" then
+            module:OnProfileChanged()
+        end
+    end
+
+end

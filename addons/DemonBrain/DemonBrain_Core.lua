@@ -201,24 +201,23 @@ local DF = DemonFramework
 ---@field autoBurst boolean
 
 ---@type DemonBrainProfile|nil
-local ModuleConfig
+
 
 ----@return DemonBrainProfile
+---@return DemonBrainProfile
 function DemonBrainCore:GetConfig()
 
-    if not ModuleConfig then
-        ModuleConfig = DF.Config:GetModuleNamespace("DemonBrain")
+    local config = DF.Config:GetModuleNamespace("DemonBrain")
 
-        if ModuleConfig.tyrantDemonThreshold == nil then
-            ModuleConfig.tyrantDemonThreshold = 6
-        end
-
-        if ModuleConfig.autoBurst == nil then
-            ModuleConfig.autoBurst = false
-        end
+    if config.tyrantDemonThreshold == nil then
+        config.tyrantDemonThreshold = 6
     end
 
-    return ModuleConfig
+    if config.autoBurst == nil then
+        config.autoBurst = false
+    end
+
+    return config
 end
 
 DF:RegisterModule("DemonBrain", {
@@ -234,6 +233,10 @@ DF:RegisterModule("DemonBrain", {
 
     OnDisable = function(self)
         -- futuro
+    end,
+    OnProfileChanged = function(self)
+
+    self:Log("Profile changed", "INFO")
     end,
 })
 

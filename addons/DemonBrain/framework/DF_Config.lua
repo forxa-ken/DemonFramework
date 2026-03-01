@@ -3,7 +3,20 @@
 -- ----------------------------------------------------------------------------
 -- Sistema de perfiles tipo ElvUI con namespace por módulo
 -- ============================================================================
+local function EnsureDatabase()
 
+    DemonBrainDB = DemonBrainDB or {}
+
+    DemonBrainDB.global = DemonBrainDB.global or {}
+    DemonBrainDB.profiles = DemonBrainDB.profiles or {}
+    DemonBrainDB.profileKeys = DemonBrainDB.profileKeys or {}
+
+    -- Garantizar que Default exista SIEMPRE
+    if not DemonBrainDB.profiles["Default"] then
+        DemonBrainDB.profiles["Default"] = {}
+    end
+
+end
 local DF = DemonFramework
 
 DF.Config = DF.Config or {}
@@ -25,22 +38,16 @@ end
 
 function Config:Initialize()
 
-    DemonBrainDB = DemonBrainDB or {}
+    EnsureDatabase()
 
-    DemonBrainDB.global = DemonBrainDB.global or {}
-    DemonBrainDB.profiles = DemonBrainDB.profiles or {}
-    DemonBrainDB.profileKeys = DemonBrainDB.profileKeys or {}
+    local charKey = UnitName("player") .. "-" .. GetRealmName()
 
-    local charKey = GetCharacterKey()
-
-    -- Si el personaje no tiene perfil asignado, usar Default
     if not DemonBrainDB.profileKeys[charKey] then
         DemonBrainDB.profileKeys[charKey] = "Default"
     end
 
     local profileName = DemonBrainDB.profileKeys[charKey]
 
-    -- Crear perfil si no existe
     if not DemonBrainDB.profiles[profileName] then
         DemonBrainDB.profiles[profileName] = {}
     end
@@ -71,4 +78,97 @@ function Config:GetModuleNamespace(moduleName)
     profile[moduleName] = profile[moduleName] or {}
 
     return profile[moduleName]
+end
+
+-- ---------------------------------------------------------------------------
+-- Crear perfil
+-- ---------------------------------------------------------------------------
+
+function Config:CreateProfile(name)
+
+    EnsureDatabase()
+
+    if not name or name == "" then return false end
+    if DemonBrainDB.profiles[name] then return false end
+
+    DemonBrainDB.profiles[name] = {}
+    return true
+end
+
+
+-- ---------------------------------------------------------------------------
+-- Eliminar perfil
+-- ---------------------------------------------------------------------------
+
+function Config:DeleteProfile(name)
+
+    EnsureDatabase()
+
+    if not DemonBrainDB.profiles[name] then return false end
+    if name == self._activeProfileName then return false end
+
+    DemonBrainDB.profiles[name] = nil
+    return true
+end
+
+-- ---------------------------------------------------------------------------
+-- Listar perfiles
+-- ---------------------------------------------------------------------------
+
+function Config:GetProfiles()
+    EnsureDatabase()
+    return DemonBrainDB.profiles
+end
+
+-- ---------------------------------------------------------------------------
+-- Cambiar perfil activo
+-- ---------------------------------------------------------------------------
+
+function Config:SetActiveProfile(name)
+
+    EnsureDatabase()
+
+    if not DemonBrainDB.profiles[name] then
+        return false
+    end
+
+    local charKey = UnitName("player") .. "-" .. GetRealmName()
+    DemonBrainDB.profileKeys[charKey] = name
+    self._activeProfileName = name
+
+    if DemonFramework and DemonFramework.NotifyProfileChanged then
+    DemonFramework:NotifyProfileChanged()
+    end
+
+    return true
+end
+
+-- ---------------------------------------------------------------------------
+-- Copiar perfil
+-- ---------------------------------------------------------------------------
+
+local function DeepCopy(source)
+
+    if type(source) ~= "table" then
+        return source
+    end
+
+    local copy = {}
+
+    for k, v in pairs(source) do
+        copy[k] = DeepCopy(v)
+    end
+
+    return copy
+end
+
+function Config:CopyProfile(fromName, toName)
+
+    EnsureDatabase()
+
+    if not DemonBrainDB.profiles[fromName] then return false end
+    if DemonBrainDB.profiles[toName] then return false end
+
+    DemonBrainDB.profiles[toName] = DeepCopy(DemonBrainDB.profiles[fromName])
+    return true
 end
