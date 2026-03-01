@@ -8,7 +8,7 @@
 -------------------------------------------------
 -- SPELL IDS
 -------------------------------------------------
-
+DemonBrain = DemonBrain or {}
 local SPELL_SHADOWBOLT = 686
 local SPELL_DEMONBOLT  = 264178
 local SPELL_DREAD      = 104316
@@ -146,24 +146,37 @@ end
 -- EVENTOS
 -------------------------------------------------
 
-local core = CreateFrame("Frame")
-core:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+-------------------------------------------------
+-- INICIALIZACIÓN CONTROLADA
+-------------------------------------------------
 
-core:SetScript("OnEvent", function(_, _, unit, _, spellID)
+local coreFrame
 
-    if unit ~= "player" then return end
+function DemonBrain:Initialize()
 
-    if spellID == SPELL_DREAD then
-        lastDreadCast = GetTime()
-        AddDemons(2)
-
-    elseif spellID == SPELL_HAND then
-        AddDemons(3)
-
-    elseif spellID == SPELL_TYRANT then
-        lastTyrantCast = GetTime()
+    if coreFrame then
+        return -- evitar doble inicialización
     end
-end)
+
+    coreFrame = CreateFrame("Frame")
+    coreFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+
+    coreFrame:SetScript("OnEvent", function(_, _, unit, _, spellID)
+
+        if unit ~= "player" then return end
+
+        if spellID == SPELL_DREAD then
+            lastDreadCast = GetTime()
+            AddDemons(2)
+
+        elseif spellID == SPELL_HAND then
+            AddDemons(3)
+
+        elseif spellID == SPELL_TYRANT then
+            lastTyrantCast = GetTime()
+        end
+    end)
+end
 
 -------------------------------------------------
 -- API
@@ -186,3 +199,24 @@ end
 function DemonBrainCore.SetTyrantThreshold(value)
     CONFIG.tyrantDemonThreshold = value
 end
+
+-------------------------------------------------
+-- REGISTRO COMO MÓDULO DEL FRAMEWORK
+-------------------------------------------------
+
+local DF = DemonFramework
+
+DF:RegisterModule("DemonBrain", {
+
+    OnLoad = function(self)
+        -- No hacemos nada pesado aquí
+    end,
+
+    OnEnable = function(self)
+        DemonBrain:Initialize()
+    end,
+
+    OnDisable = function(self)
+        -- En el futuro podríamos desregistrar eventos
+    end,
+})

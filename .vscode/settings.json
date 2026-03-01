@@ -1,0 +1,41 @@
+{
+    "Lua.runtime.version": "Lua 5.1",
+
+    "Lua.diagnostics.globals": [
+        "CreateFrame",
+        "UnitPower",
+        "Enum",
+        "C_Spell",
+        "Minimap",
+        "UIParent",
+        "Settings",
+        "GameTooltip",
+        "GetTime",
+        "UnitExists",
+        "UnitAffectingCombat",
+        "UnitClassification",
+        "GetCursorPosition",
+        "IsShiftKeyDown",
+        "math",
+        "print",
+        "DemonBrainCore",
+        "DemonBrainMain",
+        "DemonBrainDB",
+        "RefreshUI"
+    ],
+
+    "Lua.workspace.checkThirdParty": false,
+    "Lua.runtime.special": {
+        "reload": "require"
+    },
+
+    "Lua.diagnostics.disable": [
+        "undefined-field"
+    ],
+
+    "Lua.format.enable": true,
+    "Lua.format.defaultConfig": {
+        "indent_style": "space",
+        "indent_size": "4"
+    }
+}

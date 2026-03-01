@@ -1,0 +1,16 @@
+## Interface: 120001
+## Title: DemonBrain
+## Notes: Demonology Smart Helper
+## Author: Darwin
+## Version: 0.1.0
+## SavedVariables: DemonBrainDB
+
+framework/DF_Core.lua
+framework/DF_Module.lua
+framework/DF_EventBus.lua
+framework/DF_Config.lua
+framework/DF_State.lua
+
+DemonBrain_Core.lua
+DemonBrain_UI.lua
+DemonBrain_Settings.lua
