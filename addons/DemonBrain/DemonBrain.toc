@@ -10,6 +10,7 @@ framework/DF_Module.lua
 framework/DF_EventBus.lua
 framework/DF_Config.lua
 framework/DF_State.lua
+framework/DF_Logger.lua
 
 DemonBrain_Core.lua
 DemonBrain_UI.lua

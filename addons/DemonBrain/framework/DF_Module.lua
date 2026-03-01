@@ -67,7 +67,14 @@ function DF:RegisterModule(name, definition)
         OnEnable = definition.OnEnable,
         OnDisable = definition.OnDisable,
     }
+    -- Método de log contextual por módulo
+    module.Log = function(self, message, level)
+        level = level or "INFO"
 
+        if DF.Logger and DF.Logger[level] then
+            DF.Logger[level](DF.Logger, message, self.name)
+        end
+    end
     self.Modules[name] = module
 
     return module
