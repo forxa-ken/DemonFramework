@@ -4,7 +4,6 @@
 -- Sin IsUsableSpell
 -- Sin comparaciones protegidas
 -- ============================================================
-
 -------------------------------------------------
 -- SPELL IDS
 -------------------------------------------------
@@ -207,16 +206,20 @@ end
 local DF = DemonFramework
 
 DF:RegisterModule("DemonBrain", {
-
+  
     OnLoad = function(self)
-        -- No hacemos nada pesado aquí
+        -- nada pesado aquí
     end,
 
     OnEnable = function(self)
-        DemonBrain:Initialize()
+    self:Log("Module enabled", "INFO")
+    DemonBrain:Initialize()
     end,
 
     OnDisable = function(self)
-        -- En el futuro podríamos desregistrar eventos
+        -- futuro
     end,
 })
+
+-- Lanzar framework una sola vez después de registrar el módulo
+DemonFramework:Initialize()

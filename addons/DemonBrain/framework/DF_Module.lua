@@ -69,12 +69,15 @@ function DF:RegisterModule(name, definition)
     }
     -- Método de log contextual por módulo
     module.Log = function(self, message, level)
-        level = level or "INFO"
 
-        if DF.Logger and DF.Logger[level] then
-            DF.Logger[level](DF.Logger, message, self.name)
-        end
+    level = level or "INFO"
+
+    local methodName = level:sub(1,1):upper() .. level:sub(2):lower()
+
+    if DF.Logger and DF.Logger[methodName] then
+        DF.Logger[methodName](DF.Logger, message, self.name)
     end
+end
     self.Modules[name] = module
 
     return module
@@ -104,28 +107,36 @@ end
 -- ----------------------------------------------------------------------------
 function DF:EnableModule(name)
 
-    local module = self.Modules[name]
-    Assert(module, "EnableModule: Module not found: " .. name)
+    
 
-    -- Si ya está habilitado, no hacemos nada
-    if module.state == MODULE_STATE.ENABLED then
+    local module = self.Modules[name]
+
+    if not module then
+        
         return
     end
 
-    -- Si todavía no fue cargado, forzamos carga previa
-    if module.state == MODULE_STATE.REGISTERED then
+    if module.state == 3 then
+        
+        return
+    end
+
+    if module.state == 1 then
+      
         self:LoadModules()
     end
 
-    -- Ejecutar callback de activación
+   
+
     if type(module.OnEnable) == "function" then
         module:OnEnable()
+    else
+      
     end
 
-    module.state = MODULE_STATE.ENABLED
+    module.state = 3
     module.enabled = true
 end
-
 -- ----------------------------------------------------------------------------
 -- Deshabilitar un módulo
 -- ----------------------------------------------------------------------------
