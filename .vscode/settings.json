@@ -21,7 +21,9 @@
         "DemonBrainCore",
         "DemonBrainMain",
         "DemonBrainDB",
-        "RefreshUI"
+        "RefreshUI",
+        "UnitName",
+        "GetRealmName"
     ],
 
     "Lua.workspace.checkThirdParty": false,

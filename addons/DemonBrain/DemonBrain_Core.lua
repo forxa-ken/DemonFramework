@@ -15,15 +15,6 @@ local SPELL_HAND       = 105174
 local SPELL_TYRANT     = 265187
 
 -------------------------------------------------
--- CONFIG
--------------------------------------------------
-
-local CONFIG = {
-    tyrantDemonThreshold = 6,
-    autoBurst = false,
-}
-
--------------------------------------------------
 -- ESTADO
 -------------------------------------------------
 
@@ -117,7 +108,7 @@ local function GetRecommendedSpell()
     -- 3️⃣ Preparar Tirano
     if TyrantReady() then
 
-        if activeDemons < CONFIG.tyrantDemonThreshold then
+        if activeDemons < DemonBrainCore:GetConfig().tyrantDemonThreshold then
 
             if DreadReady() and shards >= 2 then
                 return SPELL_DREAD
@@ -192,11 +183,11 @@ function DemonBrainCore.GetActiveDemons()
 end
 
 function DemonBrainCore.SetBurstMode(value)
-    CONFIG.autoBurst = value
+    DemonBrainCore:GetConfig().autoBurst = value
 end
 
 function DemonBrainCore.SetTyrantThreshold(value)
-    CONFIG.tyrantDemonThreshold = value
+    DemonBrainCore:GetConfig().tyrantDemonThreshold = value
 end
 
 -------------------------------------------------
@@ -204,6 +195,31 @@ end
 -------------------------------------------------
 
 local DF = DemonFramework
+
+---@class DemonBrainProfile
+---@field tyrantDemonThreshold number
+---@field autoBurst boolean
+
+---@type DemonBrainProfile|nil
+local ModuleConfig
+
+----@return DemonBrainProfile
+function DemonBrainCore:GetConfig()
+
+    if not ModuleConfig then
+        ModuleConfig = DF.Config:GetModuleNamespace("DemonBrain")
+
+        if ModuleConfig.tyrantDemonThreshold == nil then
+            ModuleConfig.tyrantDemonThreshold = 6
+        end
+
+        if ModuleConfig.autoBurst == nil then
+            ModuleConfig.autoBurst = false
+        end
+    end
+
+    return ModuleConfig
+end
 
 DF:RegisterModule("DemonBrain", {
   

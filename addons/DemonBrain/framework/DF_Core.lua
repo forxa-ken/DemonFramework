@@ -21,6 +21,11 @@ function DF:Initialize()
 
     DF.State.initialized = true
 
+    -- Inicializar sistema de configuración
+    if DF.Config and DF.Config.Initialize then
+        DF.Config:Initialize()
+    end
+
     if self.InitializeModules then
         self:InitializeModules()
     end
