@@ -1,0 +1,30 @@
+
+--[[
+Ver perfiles existentes
+/run for k in pairs(DemonFramework.Config:GetProfiles()) do print("Profile:", k) end
+
+Crear perfil nuevo
+/run DemonFramework.Config:CreateProfile("TestProfile")
+
+Cambiar perfil nuevo
+/run DemonFramework.Config:SetProfile("TestProfile")
+
+cambiar valores de perfil nuevo 
+/run DemonBrainCore:GetConfig().tyrantDemonThreshold = 12
+luego 
+/run print("Threshold actual:", DemonBrainCore:GetConfig().tyrantDemonThreshold)
+
+volver a default 
+/run DemonFramework.Config:SetActiveProfile("Default")
+
+ver el perfil activo 
+/run print("Perfil activo:", DemonFramework.Config._activeProfileName)
+
+cambiar valor para ver el slider moverse
+/run DemonFramework.Events:Publish("PROFILE_CHANGED", { profile = DemonFramework.Config._activeProfileName })
+
+
+
+
+
+]]
