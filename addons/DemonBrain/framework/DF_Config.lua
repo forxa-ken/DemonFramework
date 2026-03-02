@@ -24,27 +24,35 @@ local function ApplyDefaults(target, defaults)
 end
 
 
-
-
-local function EnsureDatabase()
-
-    DemonBrainDB = DemonBrainDB or {}
-
-    DemonBrainDB.global = DemonBrainDB.global or {}
-    DemonBrainDB.profiles = DemonBrainDB.profiles or {}
-    DemonBrainDB.profileKeys = DemonBrainDB.profileKeys or {}
-
-    -- Garantizar que Default exista SIEMPRE
-    if not DemonBrainDB.profiles["Default"] then
-        DemonBrainDB.profiles["Default"] = {}
-    end
-
-end
 local DF = DemonFramework
 
 DF.Config = DF.Config or {}
 local Config = DF.Config
+-- Base de datos inyectada por el addon consumidor
+DF._database = DF._database or nil
 
+function DF:AttachDatabase(db)
+
+    assert(type(db) == "table", "Database must be table")
+
+    self._database = db
+end
+
+local function EnsureDatabase()
+
+    local db = DF._database
+    if not db then
+        error("No database attached to DemonFramework")
+    end
+
+    db.global = db.global or {}
+    db.profiles = db.profiles or {}
+    db.profileKeys = db.profileKeys or {}
+
+    if not db.profiles["Default"] then
+        db.profiles["Default"] = {}
+    end
+end
 -- ---------------------------------------------------------------------------
 -- Utilidad: obtener identificador único del personaje
 -- ---------------------------------------------------------------------------
@@ -65,14 +73,14 @@ function Config:Initialize()
 
     local charKey = UnitName("player") .. "-" .. GetRealmName()
 
-    if not DemonBrainDB.profileKeys[charKey] then
-        DemonBrainDB.profileKeys[charKey] = "Default"
+    if not DF._database.profileKeys[charKey] then
+        DF._database.profileKeys[charKey] = "Default"
     end
 
-    local profileName = DemonBrainDB.profileKeys[charKey]
+    local profileName = DF._database.profileKeys[charKey]
 
-    if not DemonBrainDB.profiles[profileName] then
-        DemonBrainDB.profiles[profileName] = {}
+    if not DF._database.profiles[profileName] then
+        DF._database.profiles[profileName] = {}
     end
 
     self._activeProfileName = profileName
@@ -83,7 +91,7 @@ end
 -- ---------------------------------------------------------------------------
 
 function Config:GetActiveProfile()
-    return DemonBrainDB.profiles[self._activeProfileName]
+    return DF._database.profiles[self._activeProfileName]
 end
 
 function Config:GetActiveProfileName()
@@ -98,7 +106,7 @@ function Config:GetModuleNamespace(moduleName)
 
     EnsureDatabase()
 
-    local profile = DemonBrainDB.profiles[self._activeProfileName]
+    local profile = DF._database.profiles[self._activeProfileName]
     profile[moduleName] = profile[moduleName] or {}
 
     local namespace = profile[moduleName]
@@ -121,9 +129,9 @@ function Config:CreateProfile(name)
     EnsureDatabase()
 
     if not name or name == "" then return false end
-    if DemonBrainDB.profiles[name] then return false end
+    if DF._database.profiles[name] then return false end
 
-    DemonBrainDB.profiles[name] = {}
+    DF._database.profiles[name] = {}
     return true
 end
 
@@ -136,10 +144,10 @@ function Config:DeleteProfile(name)
 
     EnsureDatabase()
 
-    if not DemonBrainDB.profiles[name] then return false end
+    if not DF._database.profiles[name] then return false end
     if name == self._activeProfileName then return false end
 
-    DemonBrainDB.profiles[name] = nil
+    DF._database.profiles[name] = nil
     return true
 end
 
@@ -149,7 +157,7 @@ end
 
 function Config:GetProfiles()
     EnsureDatabase()
-    return DemonBrainDB.profiles
+    return DF._database.profiles
 end
 
 -- ---------------------------------------------------------------------------
@@ -160,12 +168,12 @@ function Config:SetActiveProfile(name)
 
     EnsureDatabase()
 
-    if not DemonBrainDB.profiles[name] then
+    if not DF._database.profiles[name] then
         return false
     end
 
     local charKey = UnitName("player") .. "-" .. GetRealmName()
-    DemonBrainDB.profileKeys[charKey] = name
+    DF._database.profileKeys[charKey] = name
     self._activeProfileName = name
 
     if DemonFramework and DemonFramework.NotifyProfileChanged then
@@ -198,9 +206,9 @@ function Config:CopyProfile(fromName, toName)
 
     EnsureDatabase()
 
-    if not DemonBrainDB.profiles[fromName] then return false end
-    if DemonBrainDB.profiles[toName] then return false end
+    if not DF._database.profiles[fromName] then return false end
+    if DF._database.profiles[toName] then return false end
 
-    DemonBrainDB.profiles[toName] = DeepCopy(DemonBrainDB.profiles[fromName])
+    DF._database.profiles[toName] = DeepCopy(DF._database.profiles[fromName])
     return true
 end

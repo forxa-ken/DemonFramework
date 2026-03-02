@@ -30,6 +30,16 @@ local MODULE_STATE = {
     DISABLED   = 4,  -- Desactivado manualmente
 }
 
+local function Transition(module, expectedState, newState)
+
+    if module.state ~= expectedState then
+        return false
+    end
+
+    module.state = newState
+    return true
+end
+
 -- ----------------------------------------------------------------------------
 -- Función interna de validación
 -- ----------------------------------------------------------------------------
@@ -57,10 +67,15 @@ function DF:RegisterModule(name, definition)
     Assert(not self.Modules[name], "Module already registered: " .. name)
 
     local module = {
-        name = name,
-        state = MODULE_STATE.REGISTERED,
-        enabled = false,
-    }
+    name = name,
+    state = MODULE_STATE.REGISTERED,
+    enabled = false,
+    dependencies = definition.dependencies or {},
+
+    OnLoad = definition.OnLoad,
+    OnEnable = definition.OnEnable,
+    OnDisable = definition.OnDisable,
+  }
 
     -- Copiar todos los campos definidos por el módulo
     for key, value in pairs(definition) do
@@ -87,18 +102,17 @@ end
 -- Cargar todos los módulos registrados
 -- ----------------------------------------------------------------------------
 -- Ejecuta OnLoad una sola vez por módulo.
-function DF:LoadModules()
+function DF:LoadModule(name)
 
-    for _, module in pairs(self.Modules) do
+    local module = self.Modules[name]
+    if not module then return end
 
-        if module.state == MODULE_STATE.REGISTERED then
+    if not Transition(module, MODULE_STATE.REGISTERED, MODULE_STATE.LOADED) then
+        return
+    end
 
-            if type(module.OnLoad) == "function" then
-                module:OnLoad()
-            end
-
-            module.state = MODULE_STATE.LOADED
-        end
+    if type(module.OnLoad) == "function" then
+        module:OnLoad()
     end
 end
 
@@ -107,35 +121,21 @@ end
 -- ----------------------------------------------------------------------------
 function DF:EnableModule(name)
 
-    
-
     local module = self.Modules[name]
+    if not module then return end
 
-    if not module then
-        
+    -- Permitir desde LOADED o DISABLED
+    if module.state ~= MODULE_STATE.LOADED
+    and module.state ~= MODULE_STATE.DISABLED then
         return
     end
 
-    if module.state == 3 then
-        
-        return
-    end
-
-    if module.state == 1 then
-      
-        self:LoadModules()
-    end
-
-   
+    module.enabled = true
+    module.state = MODULE_STATE.ENABLED
 
     if type(module.OnEnable) == "function" then
         module:OnEnable()
-    else
-      
     end
-
-    module.state = 3
-    module.enabled = true
 end
 -- ----------------------------------------------------------------------------
 -- Deshabilitar un módulo
@@ -143,16 +143,18 @@ end
 function DF:DisableModule(name)
 
     local module = self.Modules[name]
-    if not module or not module.enabled then return end
+    if not module then return end
+
+    if not Transition(module, MODULE_STATE.ENABLED, MODULE_STATE.DISABLED) then
+        return
+    end
 
     module.enabled = false
-    module.state = MODULE_STATE.DISABLED
 
     if type(module.OnDisable) == "function" then
         module:OnDisable()
     end
 
-    -- 🔥 Limpieza automática de eventos
     if self.Events then
         self.Events:UnsubscribeOwner(module)
     end
@@ -168,9 +170,54 @@ end
 -- Se llama desde DF_Core cuando el addon termina de cargar.
 function DF:InitializeModules()
 
-    self:LoadModules()
+    local orderedModules = self:ResolveModuleOrder()
 
-    for name in pairs(self.Modules) do
-        self:EnableModule(name)
+    for _, module in ipairs(orderedModules) do
+        self:LoadModule(module.name)
     end
+
+    for _, module in ipairs(orderedModules) do
+        self:EnableModule(module.name)
+    end
+end
+
+
+function DF:ResolveModuleOrder()
+
+    local ordered = {}
+    local visited = {}
+    local visiting = {}
+
+    local function Visit(module)
+
+        if visiting[module.name] then
+            error("Circular dependency detected at module: " .. module.name)
+        end
+
+        if not visited[module.name] then
+
+            visiting[module.name] = true
+
+            for _, depName in ipairs(module.dependencies) do
+
+                local dep = self.Modules[depName]
+
+                if not dep then
+                    error("Missing dependency: " .. depName .. " for module: " .. module.name)
+                end
+
+                Visit(dep)
+            end
+
+            visiting[module.name] = nil
+            visited[module.name] = true
+            table.insert(ordered, module)
+        end
+    end
+
+    for _, module in pairs(self.Modules) do
+        Visit(module)
+    end
+
+    return ordered
 end

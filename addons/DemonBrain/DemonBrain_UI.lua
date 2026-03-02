@@ -175,5 +175,9 @@ if DemonBrainDB.hideMainIcon then
     DemonBrainMain:Hide()
 end
 
--- Primera actualización
-UpdateUI()
+function DemonBrainUI_Initialize()
+
+    UpdateUI()
+    DemonBrainMain:Show()
+
+end

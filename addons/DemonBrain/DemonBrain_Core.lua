@@ -196,6 +196,7 @@ end
 
 local DF = DemonFramework
 
+
 ---@class DemonBrainProfile
 ---@field tyrantDemonThreshold number
 ---@field autoBurst boolean
@@ -219,18 +220,20 @@ DF:RegisterModule("DemonBrain", {
         autoBurst = false,
     },
 
-    OnLoad = function(self)
-    end,
+    OnLoad = function(self)    
+end,
 
     OnEnable = function(self)
 
     self:Log("Module enabled", "INFO")
+
     DemonBrain:Initialize()
+    DemonBrainUI_Initialize()
 
     DF.Events:Subscribe("PROFILE_CHANGED", function(data)
         print("EventBus says profile:", data.profile)
     end, self)
-end,
+    end,
 
     OnDisable = function(self)
     end,
@@ -240,5 +243,17 @@ end,
     end,
 })
 
--- Lanzar framework una sola vez después de registrar el módulo
-DemonFramework:Initialize()
+local initFrame = CreateFrame("Frame")
+
+initFrame:RegisterEvent("ADDON_LOADED")
+
+initFrame:SetScript("OnEvent", function(_, event, addonName)
+
+    if addonName ~= "DemonBrain" then return end
+
+    DF:AttachDatabase(DemonBrainDB)
+
+    DemonFramework:Initialize()
+
+    initFrame:UnregisterEvent("ADDON_LOADED")
+end)
