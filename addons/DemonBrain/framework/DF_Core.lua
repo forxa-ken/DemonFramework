@@ -36,10 +36,17 @@ end
 -- ---------------------------------------------------------------------------
 function DF:NotifyProfileChanged()
 
+    -- Notificar módulos clásicos
     for _, module in pairs(self.Modules) do
         if type(module.OnProfileChanged) == "function" then
             module:OnProfileChanged()
         end
     end
 
+    -- Publicar evento global
+    if self.Events then
+        self.Events:Publish("PROFILE_CHANGED", {
+            profile = self.Config._activeProfileName
+        })
+    end
 end

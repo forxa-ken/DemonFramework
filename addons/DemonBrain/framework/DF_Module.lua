@@ -143,18 +143,19 @@ end
 function DF:DisableModule(name)
 
     local module = self.Modules[name]
-    Assert(module, "DisableModule: Module not found: " .. name)
+    if not module or not module.enabled then return end
 
-    if module.state ~= MODULE_STATE.ENABLED then
-        return
-    end
+    module.enabled = false
+    module.state = MODULE_STATE.DISABLED
 
     if type(module.OnDisable) == "function" then
         module:OnDisable()
     end
 
-    module.state = MODULE_STATE.DISABLED
-    module.enabled = false
+    -- 🔥 Limpieza automática de eventos
+    if self.Events then
+        self.Events:UnsubscribeOwner(module)
+    end
 end
 
 -- ----------------------------------------------------------------------------

@@ -223,9 +223,14 @@ DF:RegisterModule("DemonBrain", {
     end,
 
     OnEnable = function(self)
-        self:Log("Module enabled", "INFO")
-        DemonBrain:Initialize()
-    end,
+
+    self:Log("Module enabled", "INFO")
+    DemonBrain:Initialize()
+
+    DF.Events:Subscribe("PROFILE_CHANGED", function(data)
+        print("EventBus says profile:", data.profile)
+    end, self)
+end,
 
     OnDisable = function(self)
     end,
