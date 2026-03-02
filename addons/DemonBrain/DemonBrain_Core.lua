@@ -228,8 +228,7 @@ end,
     self:Log("Module enabled", "INFO")
 
     DemonBrain:Initialize()
-    DemonBrainUI_Initialize()
-
+    
     DF.Events:Subscribe("PROFILE_CHANGED", function(data)
         print("EventBus says profile:", data.profile)
     end, self)

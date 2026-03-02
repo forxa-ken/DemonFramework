@@ -181,3 +181,29 @@ function DemonBrainUI_Initialize()
     DemonBrainMain:Show()
 
 end
+
+local DF = DemonFramework
+
+DF:RegisterModule("DemonBrainUI", {
+
+    dependencies = { "DemonBrain" },
+   
+    OnLoad = function(self)
+        -- Nada pesado aquí
+    end,
+
+    OnEnable = function(self)
+
+        -- Inicializar UI cuando el motor ya esté habilitado
+        if DemonBrainUI_Initialize then
+            DemonBrainUI_Initialize()
+        end
+
+    end,
+
+    OnDisable = function(self)
+        if DemonBrainMain then
+            DemonBrainMain:Hide()
+        end
+    end,
+})
