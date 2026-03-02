@@ -205,38 +205,33 @@ local DF = DemonFramework
 
 ----@return DemonBrainProfile
 ---@return DemonBrainProfile
+---@return DemonBrainProfile
+
+
 function DemonBrainCore:GetConfig()
-
-    local config = DF.Config:GetModuleNamespace("DemonBrain")
-
-    if config.tyrantDemonThreshold == nil then
-        config.tyrantDemonThreshold = 6
-    end
-
-    if config.autoBurst == nil then
-        config.autoBurst = false
-    end
-
-    return config
+    return DF.Config:GetModuleNamespace("DemonBrain")
 end
 
 DF:RegisterModule("DemonBrain", {
-  
+
+    defaults = {
+        tyrantDemonThreshold = 6,
+        autoBurst = false,
+    },
+
     OnLoad = function(self)
-        -- nada pesado aquí
     end,
 
     OnEnable = function(self)
-    self:Log("Module enabled", "INFO")
-    DemonBrain:Initialize()
+        self:Log("Module enabled", "INFO")
+        DemonBrain:Initialize()
     end,
 
     OnDisable = function(self)
-        -- futuro
     end,
-    OnProfileChanged = function(self)
 
-    self:Log("Profile changed", "INFO")
+    OnProfileChanged = function(self)
+        self:Log("Profile changed", "INFO")
     end,
 })
 

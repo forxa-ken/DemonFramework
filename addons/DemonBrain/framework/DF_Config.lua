@@ -3,6 +3,29 @@
 -- ----------------------------------------------------------------------------
 -- Sistema de perfiles tipo ElvUI con namespace por módulo
 -- ============================================================================
+-- ---------------------------------------------------------------------------
+-- Aplicar defaults recursivamente
+-- ---------------------------------------------------------------------------
+
+local function ApplyDefaults(target, defaults)
+
+    for key, value in pairs(defaults) do
+
+        if type(value) == "table" then
+
+            target[key] = target[key] or {}
+            ApplyDefaults(target[key], value)
+
+        elseif target[key] == nil then
+            target[key] = value
+        end
+
+    end
+end
+
+
+
+
 local function EnsureDatabase()
 
     DemonBrainDB = DemonBrainDB or {}
@@ -73,11 +96,20 @@ end
 
 function Config:GetModuleNamespace(moduleName)
 
-    local profile = self:GetActiveProfile()
+    EnsureDatabase()
 
+    local profile = DemonBrainDB.profiles[self._activeProfileName]
     profile[moduleName] = profile[moduleName] or {}
 
-    return profile[moduleName]
+    local namespace = profile[moduleName]
+
+    -- Aplicar defaults si el módulo los declaró
+    local module = DF.Modules[moduleName]
+    if module and module.defaults then
+        ApplyDefaults(namespace, module.defaults)
+    end
+
+    return namespace
 end
 
 -- ---------------------------------------------------------------------------
