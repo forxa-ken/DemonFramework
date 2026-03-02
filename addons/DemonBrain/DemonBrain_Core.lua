@@ -216,8 +216,11 @@ end
 DF:RegisterModule("DemonBrain", {
 
     defaults = {
-        tyrantDemonThreshold = 6,
-        autoBurst = false,
+    tyrantDemonThreshold = 6,
+    autoBurst = false,
+    iconSize = 70,
+    iconAlpha = 1,
+    hideMainIcon = false,
     },
 
     OnLoad = function(self)    
@@ -225,13 +228,13 @@ end,
 
     OnEnable = function(self)
 
-    self:Log("Module enabled", "INFO")
+        self:Log("Module enabled", "INFO")
 
-    DemonBrain:Initialize()
-    
-    DF.Events:Subscribe("PROFILE_CHANGED", function(data)
-        print("EventBus says profile:", data.profile)
-    end, self)
+        DemonBrain:Initialize()
+        
+        DF.Events:Subscribe("PROFILE_CHANGED", function(data)
+            print("EventBus says profile:", data.profile)
+        end, self)
     end,
 
     OnDisable = function(self)

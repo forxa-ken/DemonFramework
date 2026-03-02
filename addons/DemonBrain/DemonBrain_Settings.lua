@@ -18,8 +18,9 @@ DemonBrainDB.hideMainIcon = DemonBrainDB.hideMainIcon or false
 local function RefreshUI()
 
     if DemonBrainMain then
-        DemonBrainMain:SetSize(DemonBrainDB.iconSize, DemonBrainDB.iconSize)
-        DemonBrainMain:SetAlpha(DemonBrainDB.iconAlpha)
+       local config = DemonBrainCore:GetConfig()
+       DemonBrainMain:SetSize(config.iconSize, config.iconSize)
+       DemonBrainMain:SetAlpha(config.iconAlpha)
 
         if DemonBrainDB.hideMainIcon then
             DemonBrainMain:Hide()
@@ -29,8 +30,9 @@ local function RefreshUI()
     end
 
     if DemonBrainCore then
-        DemonBrainCore.SetTyrantThreshold(DemonBrainDB.tyrantDemonThreshold)
-        DemonBrainCore.SetBurstMode(DemonBrainDB.autoBurst)
+        local config = DemonBrainCore:GetConfig()
+        DemonBrainCore.SetTyrantThreshold(config.tyrantDemonThreshold)
+        DemonBrainCore.SetBurstMode(config.autoBurst)
     end
 end
 
@@ -285,3 +287,95 @@ loginFrame:SetScript("OnEvent", function()
 
     RefreshUI()
 end)
+
+local DF = DemonFramework
+
+local settingsInitialized = false
+
+function DemonBrainSettings_Initialize()
+
+    if settingsInitialized then return end
+    settingsInitialized = true
+
+    local config = DemonBrainCore:GetConfig()
+
+    -- -----------------------------
+    -- Threshold Slider
+    -- -----------------------------
+
+    thresholdSlider:SetScript("OnValueChanged", nil)
+    thresholdSlider:SetValue(config.tyrantDemonThreshold)
+    thresholdSlider.Text:SetText("Demonios para Tirano: " .. config.tyrantDemonThreshold)
+
+    thresholdSlider:SetScript("OnValueChanged", function(self, value)
+        value = math.floor(value + 0.5)
+        config.tyrantDemonThreshold = value
+        self.Text:SetText("Demonios para Tirano: " .. value)
+        RefreshUI()
+    end)
+
+    -- -----------------------------
+    -- Burst Checkbox
+    -- -----------------------------
+
+    burstCheckbox:SetScript("OnClick", nil)
+    burstCheckbox:SetChecked(config.autoBurst)
+
+    burstCheckbox:SetScript("OnClick", function(self)
+        config.autoBurst = self:GetChecked()
+        RefreshUI()
+    end)
+
+    -- -----------------------------
+    -- Size Slider
+    -- -----------------------------
+
+    sizeSlider:SetScript("OnValueChanged", nil)
+    sizeSlider:SetValue(config.iconSize)
+    sizeSlider.Text:SetText("Tamaño del Icono: " .. config.iconSize)
+
+    sizeSlider:SetScript("OnValueChanged", function(self, value)
+        value = math.floor(value + 0.5)
+        config.iconSize = value
+        self.Text:SetText("Tamaño del Icono: " .. value)
+        RefreshUI()
+    end)
+
+    -- -----------------------------
+    -- Alpha Slider
+    -- -----------------------------
+
+    alphaSlider:SetScript("OnValueChanged", nil)
+    alphaSlider:SetValue(config.iconAlpha)
+    alphaSlider.Text:SetText(string.format("Opacidad: %.2f", config.iconAlpha))
+
+    alphaSlider:SetScript("OnValueChanged", function(self, value)
+        config.iconAlpha = value
+        self.Text:SetText(string.format("Opacidad: %.2f", value))
+        RefreshUI()
+    end)
+
+    RefreshUI()
+end
+
+
+
+DF:RegisterModule("DemonBrainSettings", {
+
+    dependencies = { "DemonBrain" },
+
+    OnLoad = function(self)
+        -- nada pesado aquí
+    end,
+
+    OnEnable = function(self)
+        -- Si necesitas inicializar panel o refrescar valores, hazlo aquí
+        if DemonBrainSettings_Initialize then
+            DemonBrainSettings_Initialize()
+        end
+    end,
+
+    OnDisable = function(self)
+        -- Opcional: ocultar panel si quieres
+    end,
+})
