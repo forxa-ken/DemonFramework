@@ -180,7 +180,8 @@ DF:RegisterModule("DemonBrainSettings", {
 })
 
 -------------------------------------------------
--- MINIMAP BUTTON
+-------------------------------------------------
+-- MINIMAP BUTTON (Blizzard Native Style)
 -------------------------------------------------
 
 local minimapFrame = CreateFrame("Frame")
@@ -191,21 +192,83 @@ minimapFrame:SetScript("OnEvent", function()
     local config = GetConfig()
     if not config then return end
 
-    -- Crear botón
+    config.minimapAngle = config.minimapAngle or 200
+
+    -- Crear botón base
     local btn = CreateFrame("Button", "DemonBrainMiniMapButton", Minimap)
-    btn:SetSize(32, 32)
+    btn:SetSize(31, 31)
+    btn:SetFrameStrata("MEDIUM")
     btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     btn:RegisterForDrag("LeftButton")
 
-    local icon = btn:CreateTexture(nil, "BACKGROUND")
-    icon:SetTexture("Interface\\Icons\\Spell_Shadow_DemonForm")
-    icon:SetAllPoints()
+    -------------------------------------------------
+    -- Icono
+    -------------------------------------------------
 
-    -- Posición circular fija (simple)
-    btn:SetPoint("TOPLEFT", Minimap, "TOPLEFT", 0, 0)
+    btn.icon = btn:CreateTexture(nil, "BACKGROUND")
+    btn.icon:SetTexture("Interface\\Icons\\Spell_Shadow_DemonForm")
+    btn.icon:SetSize(20, 20)
+    btn.icon:SetPoint("CENTER")
 
     -------------------------------------------------
-    -- CLICK
+    -- Borde estilo Blizzard
+    -------------------------------------------------
+
+    btn.border = btn:CreateTexture(nil, "OVERLAY")
+    btn.border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    btn.border:SetSize(53, 53)
+    btn.border:SetPoint("TOPLEFT")
+
+    -------------------------------------------------
+    -- Highlight real Blizzard
+    -------------------------------------------------
+
+    btn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+
+    -------------------------------------------------
+    -- Posición circular real
+    -------------------------------------------------
+
+    local function UpdatePosition()
+        local angle = math.rad(config.minimapAngle)
+        local radius = (Minimap:GetWidth() / 2)
+
+        local x = math.cos(angle) * radius
+        local y = math.sin(angle) * radius
+
+        btn:ClearAllPoints()
+        btn:SetPoint("CENTER", Minimap, "CENTER", x, y)
+    end
+
+    UpdatePosition()
+
+    -------------------------------------------------
+    -- Drag circular
+    -------------------------------------------------
+
+    btn:SetScript("OnDragStart", function(self)
+        self:SetScript("OnUpdate", function()
+
+            local mx, my = Minimap:GetCenter()
+            local cx, cy = GetCursorPosition()
+            local scale = UIParent:GetEffectiveScale()
+
+            cx = cx / scale
+            cy = cy / scale
+
+            local angle = math.deg(math.atan2(cy - my, cx - mx))
+
+            config.minimapAngle = angle
+            UpdatePosition()
+        end)
+    end)
+
+    btn:SetScript("OnDragStop", function(self)
+        self:SetScript("OnUpdate", nil)
+    end)
+
+    -------------------------------------------------
+    -- Clicks
     -------------------------------------------------
 
     btn:SetScript("OnClick", function(self, button)
@@ -213,7 +276,7 @@ minimapFrame:SetScript("OnEvent", function()
         local config = GetConfig()
         if not config then return end
 
-        -- SHIFT + CLICK IZQUIERDO → Toggle Burst
+        -- SHIFT + CLICK IZQUIERDO = Burst
         if IsShiftKeyDown() and button == "LeftButton" then
             config.autoBurst = not config.autoBurst
 
@@ -222,18 +285,17 @@ minimapFrame:SetScript("OnEvent", function()
             else
                 print("|cffff0000DemonBrain: Burst DESACTIVADO|r")
             end
-
             return
         end
 
-        -- CLICK IZQUIERDO → Abrir configuración
+        -- CLICK IZQUIERDO = Settings
         if button == "LeftButton" then
             Settings.OpenToCategory(category:GetID())
             Settings.OpenToCategory(category:GetID())
             return
         end
 
-        -- CLICK DERECHO → Ocultar icono principal
+        -- CLICK DERECHO = Ocultar icono principal
         if button == "RightButton" then
             config.hideMainIcon = not config.hideMainIcon
             RefreshUI()
@@ -241,7 +303,7 @@ minimapFrame:SetScript("OnEvent", function()
     end)
 
     -------------------------------------------------
-    -- TOOLTIP
+    -- Tooltip
     -------------------------------------------------
 
     btn:SetScript("OnEnter", function(self)
