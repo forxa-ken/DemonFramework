@@ -178,3 +178,91 @@ DF:RegisterModule("DemonBrainSettings", {
         SyncSettings()
     end,
 })
+
+-------------------------------------------------
+-- MINIMAP BUTTON
+-------------------------------------------------
+
+local minimapFrame = CreateFrame("Frame")
+minimapFrame:RegisterEvent("PLAYER_LOGIN")
+
+minimapFrame:SetScript("OnEvent", function()
+
+    local config = GetConfig()
+    if not config then return end
+
+    -- Crear botón
+    local btn = CreateFrame("Button", "DemonBrainMiniMapButton", Minimap)
+    btn:SetSize(32, 32)
+    btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    btn:RegisterForDrag("LeftButton")
+
+    local icon = btn:CreateTexture(nil, "BACKGROUND")
+    icon:SetTexture("Interface\\Icons\\Spell_Shadow_DemonForm")
+    icon:SetAllPoints()
+
+    -- Posición circular fija (simple)
+    btn:SetPoint("TOPLEFT", Minimap, "TOPLEFT", 0, 0)
+
+    -------------------------------------------------
+    -- CLICK
+    -------------------------------------------------
+
+    btn:SetScript("OnClick", function(self, button)
+
+        local config = GetConfig()
+        if not config then return end
+
+        -- SHIFT + CLICK IZQUIERDO → Toggle Burst
+        if IsShiftKeyDown() and button == "LeftButton" then
+            config.autoBurst = not config.autoBurst
+
+            if config.autoBurst then
+                print("|cff00ff00DemonBrain: Burst ACTIVADO|r")
+            else
+                print("|cffff0000DemonBrain: Burst DESACTIVADO|r")
+            end
+
+            return
+        end
+
+        -- CLICK IZQUIERDO → Abrir configuración
+        if button == "LeftButton" then
+            Settings.OpenToCategory(category:GetID())
+            Settings.OpenToCategory(category:GetID())
+            return
+        end
+
+        -- CLICK DERECHO → Ocultar icono principal
+        if button == "RightButton" then
+            config.hideMainIcon = not config.hideMainIcon
+            RefreshUI()
+        end
+    end)
+
+    -------------------------------------------------
+    -- TOOLTIP
+    -------------------------------------------------
+
+    btn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:AddLine("DemonBrain", 1, 0.82, 0)
+        GameTooltip:AddLine(" ")
+        GameTooltip:AddLine("Click Izquierdo: Configuración")
+        GameTooltip:AddLine("Click Derecho: Ocultar Icono")
+        GameTooltip:AddLine("Shift + Click Izquierdo: Toggle Burst")
+        GameTooltip:AddLine(" ")
+
+        if config.autoBurst then
+            GameTooltip:AddLine("Burst: ACTIVADO", 0,1,0)
+        else
+            GameTooltip:AddLine("Burst: DESACTIVADO", 1,0,0)
+        end
+
+        GameTooltip:Show()
+    end)
+
+    btn:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+end)

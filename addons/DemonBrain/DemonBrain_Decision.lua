@@ -11,15 +11,22 @@ function DemonBrainDecision:GetBestSpell()
 
     local state = DemonBrainCore.BuildState()
     local threshold = DemonBrainCore.GetTyrantThreshold()
-    print("---- DEMONBRAIN DEBUG ----")
-    print("DreadReady:", state.dreadReady)
-    print("TyrantReady:", state.tyrantReady)
-    print("ActiveDemons:", state.activeDemons)
-    print("Threshold:", threshold)
-    print("Shards:", state.shards)
-    print("DemonCoreActive:", DemonBrainCore.IsDemonCoreActive())
+    local config = DemonBrainCore:GetConfig()
+    local burstActive = config and config.autoBurst
+
     -------------------------------------------------
-    -- 1️⃣ Demonbolt (Núcleo Demoníaco)
+    -- 🔥 BURST MODE (Tyrant prioridad absoluta)
+    -------------------------------------------------
+
+    if burstActive then
+        if state.tyrantReady
+           and state.activeDemons >= threshold then
+            return SPELL.TYRANT
+        end
+    end
+
+    -------------------------------------------------
+    -- 1️⃣ Demonbolt
     -------------------------------------------------
 
     if DemonBrainCore.IsDemonCoreActive()
@@ -28,13 +35,15 @@ function DemonBrainDecision:GetBestSpell()
     end
 
     -------------------------------------------------
-    -- 2️⃣ Tyrant (REGLA ABSOLUTA)
+    -- 2️⃣ Tyrant (modo normal)
     -------------------------------------------------
 
-    if state.tyrantReady
-        and state.activeDemons >= threshold
-        and not state.dreadReady then
+    if not burstActive then
+        if state.tyrantReady
+           and state.activeDemons >= threshold
+           and not state.dreadReady then
             return SPELL.TYRANT
+        end
     end
 
     -------------------------------------------------
