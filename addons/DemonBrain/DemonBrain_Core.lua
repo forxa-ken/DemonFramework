@@ -318,7 +318,7 @@ initFrame:SetScript("OnEvent", function()
     if not DemonBrainDB then
         DemonBrainDB = {}
     end
-
+    DemonBrainDB.burstMode = DemonBrainDB.burstMode or "normal"
     if DemonFramework and DemonFramework.AttachDatabase then
         DemonFramework:AttachDatabase(DemonBrainDB)
     end

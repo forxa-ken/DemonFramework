@@ -1,24 +1,52 @@
 -- ============================================================
--- DemonBrain Decision Engine (Jerárquico Estable)
+-- DemonBrain Decision Engine (3 Burst Modes)
 -- ============================================================
 
 DemonBrainDecision = {}
 
 local SPELL = DemonBrainSpells
-local ACTIONS = DemonBrainActions
+
+-------------------------------------------------
+-- BURST TARGET CHECK (solo usado en modo auto)
+-------------------------------------------------
+
+local function IsBurstTarget()
+
+    if not UnitExists("target") then return false end
+    if not UnitCanAttack("player", "target") then return false end
+
+    local classification = UnitClassification("target")
+
+    if classification == "elite"
+    or classification == "rareelite"
+    or classification == "worldboss" then
+        return true
+    end
+
+    if UnitLevel("target") == -1 then
+        return true
+    end
+
+    return false
+end
+
+-------------------------------------------------
+-- DECISION ENGINE
+-------------------------------------------------
 
 function DemonBrainDecision:GetBestSpell()
 
     local state = DemonBrainCore.BuildState()
     local threshold = DemonBrainCore.GetTyrantThreshold()
     local config = DemonBrainCore:GetConfig()
-    local burstActive = config and config.autoBurst
+
+    local burstMode = config and config.burstMode or "normal"
 
     -------------------------------------------------
-    -- 🔥 BURST MODE (Tyrant prioridad absoluta)
+    -- 🔴 BURST MANUAL (prioridad absoluta siempre)
     -------------------------------------------------
 
-    if burstActive then
+    if burstMode == "manual" then
         if state.tyrantReady
            and state.activeDemons >= threshold then
             return SPELL.TYRANT
@@ -26,7 +54,18 @@ function DemonBrainDecision:GetBestSpell()
     end
 
     -------------------------------------------------
-    -- 1️⃣ Demonbolt
+    -- 🟣 BURST AUTOMÁTICO (solo elite / boss)
+    -------------------------------------------------
+
+    if burstMode == "auto" and IsBurstTarget() then
+        if state.tyrantReady
+           and state.activeDemons >= threshold then
+            return SPELL.TYRANT
+        end
+    end
+
+    -------------------------------------------------
+    -- 🟢 ROTACIÓN NORMAL
     -------------------------------------------------
 
     if DemonBrainCore.IsDemonCoreActive()
@@ -34,21 +73,13 @@ function DemonBrainDecision:GetBestSpell()
         return SPELL.DEMONBOLT
     end
 
-    -------------------------------------------------
-    -- 2️⃣ Tyrant (modo normal)
-    -------------------------------------------------
-
-    if not burstActive then
+    if burstMode == "normal" then
         if state.tyrantReady
            and state.activeDemons >= threshold
-           and not state.dreadReady then
+           and state.shards < 2 then
             return SPELL.TYRANT
         end
     end
-
-    -------------------------------------------------
-    -- 3️⃣ Dread
-    -------------------------------------------------
 
     if state.dreadReady then
 
@@ -65,17 +96,9 @@ function DemonBrainDecision:GetBestSpell()
         end
     end
 
-    -------------------------------------------------
-    -- 4️⃣ Hand
-    -------------------------------------------------
-
     if state.shards >= 3 then
         return SPELL.HAND
     end
-
-    -------------------------------------------------
-    -- 5️⃣ Filler
-    -------------------------------------------------
 
     return SPELL.SHADOWBOLT
 end
