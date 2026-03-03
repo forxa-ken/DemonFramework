@@ -23,7 +23,14 @@
         "DemonBrainDB",
         "RefreshUI",
         "UnitName",
-        "GetRealmName"
+        "GetRealmName",
+        "C_SpellBook",
+        "C_ClassTalents",
+        "C_Traits",
+        "UnitGUID",
+        "CombatLogGetCurrentEventInfo",
+        "C_Timer"
+
     ],
 
     "Lua.workspace.checkThirdParty": false,

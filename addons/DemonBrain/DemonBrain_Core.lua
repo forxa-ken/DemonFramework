@@ -1,65 +1,140 @@
 -- ============================================================
--- DemonBrain Core (Retail Safe FINAL)
--- Sin cooldown API
--- Sin IsUsableSpell
--- Sin comparaciones protegidas
+-- DemonBrain Core
+-- Midnight Stable Manual Version (Fully Documented)
 -- ============================================================
--------------------------------------------------
--- SPELL IDS
--------------------------------------------------
+--
+-- Este archivo contiene:
+-- ✔ Sistema manual de cooldowns
+-- ✔ Tracking manual de demonios activos
+-- ✔ Acceso al sistema de configuración del Framework
+-- ✔ Construcción del estado que usa DemonBrain_Decision.lua
+--
+-- NO usa API moderna de cooldown por problemas de taint en Midnight.
+-- Todos los CD son manuales.
+--
+-- Depende de:
+--   - DemonBrain_Decision.lua
+--   - DemonFramework (Config + Database)
+--
+-- ============================================================
+
 DemonBrain = DemonBrain or {}
-local SPELL_SHADOWBOLT = 686
-local SPELL_DEMONBOLT  = 264178
-local SPELL_DREAD      = 104316
-local SPELL_HAND       = 105174
-local SPELL_TYRANT     = 265187
+DemonBrainCore = DemonBrainCore or {}
 
 -------------------------------------------------
--- ESTADO
+-- SPELL IDS (Retail Midnight)
 -------------------------------------------------
+-- IDs oficiales de hechizos de Brujo Demonología
+--
+-- 686      = Shadow Bolt (Descarga de las Sombras)
+-- 264178   = Demonbolt (Descarga demoníaca)
+-- 104316   = Call Dreadstalkers (Llamar a terracechadores)
+-- 105174   = Hand of Gul'dan (Mano de Gul'dan)
+-- 265187   = Summon Demonic Tyrant (Invocar Tirano demoníaco)
 
-local lastDreadCast  = 0
-local lastTyrantCast = 0
+DemonBrainSpells = {
+    SHADOWBOLT = 686,
+    DEMONBOLT  = 264178,
+    DREAD      = 104316,
+    HAND       = 105174,
+    TYRANT     = 265187,
+}
 
-local demonEvents = {}
+local SPELL = DemonBrainSpells
 
-local DREAD_CD   = 20
-local TYRANT_CD  = 90   -- Solo base (no dependemos del juego)
-local DEMON_DURATION = 12
+-------------------------------------------------
+-- TALENT TRACKING
+-------------------------------------------------
+-- TALENT: Llamada demoníaca (Demonic Calling)
+-- SpellID: 1276947
+--
+-- IMPORTANTE:
+-- Este talento NO modifica el cooldown.
+-- Solo modifica coste y cast time.
+--
+-- Se mantiene para lógica futura (coste dinámico).
+
+local TALENT_DEMONIC_CALLING = 1276947
+
+DemonBrainTalent = {
+    demonicCallingRank = 0,
+}
+
+-- API utilizada:
+-- C_SpellBook.IsSpellKnown(spellID)
+-- API Retail moderna para verificar talentos conocidos.
+
+local function UpdateTalentState()
+
+    if C_SpellBook and C_SpellBook.IsSpellKnown then
+        if C_SpellBook.IsSpellKnown(TALENT_DEMONIC_CALLING) then
+            DemonBrainTalent.demonicCallingRank = 1
+        else
+            DemonBrainTalent.demonicCallingRank = 0
+        end
+    else
+        DemonBrainTalent.demonicCallingRank = 0
+    end
+end
+
+-------------------------------------------------
+-- COOLDOWNS MANUALES (NO API)
+-------------------------------------------------
+-- Se evita C_Spell.GetSpellCooldown por:
+--  - taint
+--  - valores "secret number"
+--  - comportamiento inconsistente en Midnight
+--
+-- Sistema manual basado en GetTime().
+
+local lastDreadCast  = 0   -- Último casteo de Call Dreadstalkers
+local lastTyrantCast = 0   -- Último casteo de Summon Demonic Tyrant
+
+local DREAD_CD_BASE  = 20  -- CD real: 20 segundos
+local TYRANT_CD_BASE = 60  -- CD real: 60 segundos
+
+-- API usada:
+-- GetTime() → tiempo en segundos desde inicio de sesión
+
+local function GetDreadCooldown()
+    return DREAD_CD_BASE
+end
+
+local function DreadReady()
+    return (GetTime() - lastDreadCast) >= GetDreadCooldown()
+end
+
+local function TyrantReady()
+    return (GetTime() - lastTyrantCast) >= TYRANT_CD_BASE
+end
 
 -------------------------------------------------
 -- UTILIDADES
 -------------------------------------------------
 
+-- API utilizada:
+-- UnitPower("player", Enum.PowerType.SoulShards)
+--
+-- Devuelve fragmentos de alma actuales.
+
 local function GetShards()
     return UnitPower("player", Enum.PowerType.SoulShards) or 0
 end
 
-local function TimeSince(t)
-    return GetTime() - t
-end
-
-local function DreadReady()
-    return TimeSince(lastDreadCast) >= DREAD_CD
-end
-
-local function TyrantReady()
-    return TimeSince(lastTyrantCast) >= TYRANT_CD
-end
-
 -------------------------------------------------
--- NÚCLEO DEMONÍACO (método estable que ya funcionó)
+-- TRACKING MANUAL DE DEMONIOS
 -------------------------------------------------
+-- No se usa API de pets.
+-- Se rastrean invocaciones manualmente.
+--
+-- Cada invocación guarda:
+--   - tiempo de spawn
+--   - cantidad de demonios
+--
+-- Duración asumida: 12s (Dreadstalkers / Imps base)
 
-local function DemonCoreActive()
-    local info = C_Spell.GetSpellInfo(SPELL_DEMONBOLT)
-    if not info then return false end
-    return info.castTime == 0
-end
-
--------------------------------------------------
--- TRACKING DEMONIOS
--------------------------------------------------
+local DEMON_DURATION = 12
+local demonEvents = {}
 
 local function CleanupDemons()
 
@@ -86,176 +161,173 @@ local function AddDemons(count)
 end
 
 -------------------------------------------------
--- MOTOR DE PRIORIDAD
+-- BUILD STATE (USADO POR DECISION ENGINE)
 -------------------------------------------------
+-- Esta función es llamada por:
+-- DemonBrainDecision:GetBestSpell()
 
-local function GetRecommendedSpell()
+function DemonBrainCore.BuildState()
 
-    local shards = GetShards()
-    local coreActive = DemonCoreActive()
-    local activeDemons = CleanupDemons()
-
-    -- 1️⃣ Evitar sobrecap
-    if shards >= 4 then
-        return SPELL_HAND
-    end
-
-    -- 2️⃣ Núcleo Demoníaco
-    if coreActive and shards <= 3 then
-        return SPELL_DEMONBOLT
-    end
-
-    -- 3️⃣ Preparar Tirano
-    if TyrantReady() then
-
-        if activeDemons < DemonBrainCore:GetConfig().tyrantDemonThreshold then
-
-            if DreadReady() and shards >= 2 then
-                return SPELL_DREAD
-            end
-
-            if shards >= 3 then
-                return SPELL_HAND
-            end
-
-        else
-            return SPELL_TYRANT
-        end
-    end
-
-    -- 4️⃣ Terrace normal
-    if DreadReady() and shards >= 2 then
-        return SPELL_DREAD
-    end
-
-    -- 5️⃣ Filler
-    return SPELL_SHADOWBOLT
+    return {
+        shards = GetShards(),
+        activeDemons = CleanupDemons(),
+        dreadReady = DreadReady(),
+        tyrantReady = TyrantReady(),
+        rank = DemonBrainTalent.demonicCallingRank,
+    }
 end
 
 -------------------------------------------------
--- EVENTOS
+-- CONFIG ACCESS (USA DEMONFRAMEWORK)
 -------------------------------------------------
+-- Llama a:
+-- DemonFramework.Config:GetModuleNamespace("DemonBrain")
+--
+-- Archivo externo:
+-- framework/DF_Config.lua
 
--------------------------------------------------
--- INICIALIZACIÓN CONTROLADA
--------------------------------------------------
-
-local coreFrame
-
-function DemonBrain:Initialize()
-
-    if coreFrame then
-        return -- evitar doble inicialización
+function DemonBrainCore:GetConfig()
+    if not DemonFramework or not DemonFramework.Config then
+        return nil
     end
 
-    coreFrame = CreateFrame("Frame")
-    coreFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
-
-    coreFrame:SetScript("OnEvent", function(_, _, unit, _, spellID)
-
-        if unit ~= "player" then return end
-
-        if spellID == SPELL_DREAD then
-            lastDreadCast = GetTime()
-            AddDemons(2)
-
-        elseif spellID == SPELL_HAND then
-            AddDemons(3)
-
-        elseif spellID == SPELL_TYRANT then
-            lastTyrantCast = GetTime()
-        end
-    end)
+    return DemonFramework.Config:GetModuleNamespace("DemonBrain")
 end
 
 -------------------------------------------------
--- API
+-- THRESHOLD (SLIDER UI)
+-------------------------------------------------
+-- El slider define:
+-- namespace.tyrantDemonThreshold
+--
+-- Usado por:
+-- DemonBrain_Decision.lua
+
+function DemonBrainCore.GetTyrantThreshold()
+
+    local namespace = DemonBrainCore:GetConfig()
+
+    if not namespace then
+        return 6
+    end
+
+    return namespace.tyrantDemonThreshold or 6
+end
+
+-------------------------------------------------
+-- API EXPUESTA AL ADDON
 -------------------------------------------------
 
-DemonBrainCore = {}
+-- Llama a DemonBrainDecision (archivo externo)
 
 function DemonBrainCore.GetNextSpell()
-    return GetRecommendedSpell()
+    return DemonBrainDecision:GetBestSpell()
 end
 
 function DemonBrainCore.GetActiveDemons()
     return CleanupDemons()
 end
 
-function DemonBrainCore.SetBurstMode(value)
-    DemonBrainCore:GetConfig().autoBurst = value
-end
+-------------------------------------------------
+-- EVENTOS
+-------------------------------------------------
+-- API utilizada:
+-- CreateFrame("Frame")
+-- RegisterEvent(...)
+-- SetScript("OnEvent", ...)
+-- UNIT_SPELLCAST_SUCCEEDED
 
-function DemonBrainCore.SetTyrantThreshold(value)
-    DemonBrainCore:GetConfig().tyrantDemonThreshold = value
+local coreFrame
+
+function DemonBrain:Initialize()
+
+    if coreFrame then return end
+
+    coreFrame = CreateFrame("Frame")
+
+    UpdateTalentState()
+
+    coreFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+    coreFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    coreFrame:RegisterEvent("TRAIT_CONFIG_UPDATED")
+
+    coreFrame:SetScript("OnEvent", function(_, event, ...)
+
+        if event == "PLAYER_ENTERING_WORLD"
+        or event == "TRAIT_CONFIG_UPDATED" then
+            UpdateTalentState()
+        end
+
+        if event == "UNIT_SPELLCAST_SUCCEEDED" then
+
+            local unitTarget, _, spellID = ...
+
+            if unitTarget == "player" and spellID then
+
+                if spellID == SPELL.DREAD then
+                    lastDreadCast = GetTime()
+                    AddDemons(2)
+
+                elseif spellID == SPELL.HAND then
+                    AddDemons(3)
+
+                elseif spellID == SPELL.TYRANT then
+                    lastTyrantCast = GetTime()
+                end
+            end
+        end
+    end)
 end
 
 -------------------------------------------------
--- REGISTRO COMO MÓDULO DEL FRAMEWORK
+-- DEMONIC CORE PROC CHECK
 -------------------------------------------------
+-- Verifica si Demonbolt es instantáneo.
+-- API usada:
+-- C_Spell.GetSpellInfo(spellID)
 
-local DF = DemonFramework
+function DemonBrainCore.IsDemonCoreActive()
 
+    if not C_Spell or not C_Spell.GetSpellInfo then
+        return false
+    end
 
----@class DemonBrainProfile
----@field tyrantDemonThreshold number
----@field autoBurst boolean
+    local spellInfo = C_Spell.GetSpellInfo(SPELL.DEMONBOLT)
 
----@type DemonBrainProfile|nil
+    if not spellInfo then
+        return false
+    end
 
-
-----@return DemonBrainProfile
----@return DemonBrainProfile
----@return DemonBrainProfile
-
-
-function DemonBrainCore:GetConfig()
-    return DF.Config:GetModuleNamespace("DemonBrain")
+    return spellInfo.castTime == 0
 end
 
-DF:RegisterModule("DemonBrain", {
-
-    defaults = {
-    tyrantDemonThreshold = 6,
-    autoBurst = false,
-    iconSize = 70,
-    iconAlpha = 1,
-    hideMainIcon = false,
-    },
-
-    OnLoad = function(self)    
-end,
-
-    OnEnable = function(self)
-
-        self:Log("Module enabled", "INFO")
-
-        DemonBrain:Initialize()
-        
-        DF.Events:Subscribe("PROFILE_CHANGED", function(data)
-            print("EventBus says profile:", data.profile)
-        end, self)
-    end,
-
-    OnDisable = function(self)
-    end,
-
-    OnProfileChanged = function(self)
-        self:Log("Profile changed", "INFO")
-    end,
-})
+-------------------------------------------------
+-- AUTO INITIALIZATION
+-------------------------------------------------
+-- Se ejecuta en PLAYER_LOGIN
+-- Adjunta DB al Framework
+-- Inicializa perfiles
+-- Inicializa Core
 
 local initFrame = CreateFrame("Frame")
 
-initFrame:RegisterEvent("ADDON_LOADED")
+initFrame:RegisterEvent("PLAYER_LOGIN")
 
-initFrame:SetScript("OnEvent", function(_, event, addonName)
+initFrame:SetScript("OnEvent", function()
 
-    if addonName ~= "DemonBrain" then return end
+    if not DemonBrainDB then
+        DemonBrainDB = {}
+    end
 
-    DF:AttachDatabase(DemonBrainDB)
+    if DemonFramework and DemonFramework.AttachDatabase then
+        DemonFramework:AttachDatabase(DemonBrainDB)
+    end
 
-    DemonFramework:Initialize()
+    if DemonFramework and DemonFramework.Config then
+        DemonFramework.Config:Initialize()
+    end
 
-    initFrame:UnregisterEvent("ADDON_LOADED")
+    if DemonBrain and DemonBrain.Initialize then
+        DemonBrain:Initialize()
+    end
 end)

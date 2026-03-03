@@ -1,14 +1,19 @@
--- ============================================================================
--- DemonFramework - Core Bootstrap
--- ============================================================================
+-------------------------------------------------
+-- DemonFramework Core
+-------------------------------------------------
 
+-- Garantizar existencia global
 _G.DemonFramework = _G.DemonFramework or {}
+
 local DF = _G.DemonFramework
 
--- Contenedores base únicos
+-- Inicialización segura
 DF.Modules = DF.Modules or {}
-DF.Events  = DF.Events  or {}
 DF.State   = DF.State   or {}
+DF.Events  = DF.Events  or {}
+DF.Config  = DF.Config  or {}
+DF.Logger  = DF.Logger  or {}
+
 
 -- ----------------------------------------------------------------------------
 -- Inicialización controlada

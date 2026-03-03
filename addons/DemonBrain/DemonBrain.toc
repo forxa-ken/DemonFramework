@@ -11,7 +11,10 @@ framework/DF_EventBus.lua
 framework/DF_Config.lua
 framework/DF_State.lua
 framework/DF_Logger.lua
+framework/DF_Simulation.lua
 
 DemonBrain_Core.lua
+DemonBrain_Actions.lua
+DemonBrain_Decision.lua
 DemonBrain_UI.lua
 DemonBrain_Settings.lua
