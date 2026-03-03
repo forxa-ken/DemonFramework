@@ -274,6 +274,13 @@ function DemonBrain:Initialize()
                 elseif spellID == SPELL.TYRANT then
                     lastTyrantCast = GetTime()
                 end
+                if DemonBrainMain and DemonBrainMain:IsShown() then
+                    C_Timer.After(0, function()
+                        if DemonBrainMain and DemonBrainMain:GetScript("OnEvent") then
+                            DemonBrainMain:GetScript("OnEvent")(DemonBrainMain, "UNIT_SPELLCAST_SUCCEEDED", "player")
+                        end
+                    end)
+                end
             end
         end
     end)

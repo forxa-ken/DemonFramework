@@ -13,6 +13,9 @@ framework/DF_State.lua
 framework/DF_Logger.lua
 framework/DF_Simulation.lua
 
+locale/enUS.lua
+locale/esES.lua
+DemonBrain_Locale.lua
 DemonBrain_Core.lua
 DemonBrain_Actions.lua
 DemonBrain_Decision.lua

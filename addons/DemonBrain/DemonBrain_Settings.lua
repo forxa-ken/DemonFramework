@@ -2,9 +2,104 @@
 -- DemonBrain Settings
 -- Modern UI + 3 Burst Modes + Stable Minimap Button + Scroll Fix
 -- ============================================================
-
 local DF = DemonFramework
+local header
+local sub
+local tyrantSection
+local burstSection
+local uiSection
+local thresholdSlider
+local sizeSlider
+local alphaSlider
+local langDesc
+local tyrantDesc
+local burstDesc
+local uiDesc
+local reloadBtn
+local langDropdown
+local SyncSettings
 
+local function RefreshAllTexts()
+
+        local L = DemonBrain_L or {}
+
+        if header then
+            header:SetText(L.TITLE or "")
+        end
+
+        if sub then
+            sub:SetText(L.SUBTITLE or "")
+        end
+
+        if tyrantSection and tyrantSection.title then
+            tyrantSection.title:SetText(L.SECTION_TYRANT or "")
+        end
+
+        if burstSection and burstSection.title then
+            burstSection.title:SetText(L.SECTION_BURST or "")
+        end
+
+        if uiSection and uiSection.title then
+            uiSection.title:SetText(L.SECTION_UI or "")
+        end
+
+        local config
+        if DemonBrainCore and DemonBrainCore.GetConfig then
+            config = DemonBrainCore:GetConfig()
+        end
+        if config then
+
+            if thresholdSlider and thresholdSlider.Text then
+                thresholdSlider.Text:SetText((L.SLIDER_DEMONS or "") .. " " .. config.tyrantDemonThreshold)
+            end
+
+            if sizeSlider and sizeSlider.Text then
+                sizeSlider.Text:SetText((L.SLIDER_SIZE or "") .. " " .. config.iconSize)
+            end
+
+            if alphaSlider and alphaSlider.Text then
+                alphaSlider.Text:SetText((L.SLIDER_ALPHA or "") .. " " .. string.format("%.2f", config.iconAlpha))
+            end
+            if langDesc then
+                langDesc:SetText(L.LANG_DESC)
+            end
+
+            if tyrantDesc then
+                tyrantDesc:SetText(L.TYRANT_DESC)
+            end
+
+            if burstDesc then
+                burstDesc:SetText(L.BURST_DESC)
+            end
+
+            if uiDesc then
+                uiDesc:SetText(L.UI_DESC)
+            end
+
+            if reloadBtn then
+                reloadBtn:SetText(L.RELOAD_BUTTON)
+            end
+            if config.burstMode then
+                DemonBrain_SetBurstMode(config.burstMode)
+            end
+        end
+end
+
+
+local function GetLocaleTable()
+    if DemonBrain_L then
+        return DemonBrain_L
+    end
+
+    -- fallback seguro
+    return {
+        TITLE = "DemonBrain",
+        SUBTITLE = "",
+        SECTION_LANG = "Language",
+        LANGUAGE_EN = "English",
+        LANGUAGE_ES = "Spanish",
+    }
+end
 -------------------------------------------------
 -- UTIL
 -------------------------------------------------
@@ -22,6 +117,7 @@ local function EnsureDefaults(config)
     config.iconAlpha = config.iconAlpha or 1
     config.burstMode = config.burstMode or "normal"
     config.minimapAngle = config.minimapAngle or 200
+    config.language = config.language or GetLocale()
 end
 
 local function RefreshUI()
@@ -41,42 +137,22 @@ local function RefreshUI()
 end
 
 -------------------------------------------------
--- PANEL BASE CON SCROLL CORRECTO
--------------------------------------------------
-
--------------------------------------------------
 -- PANEL BASE CON SCROLL REAL (COMPATIBLE SETTINGS API)
 -------------------------------------------------
-
 local panel = CreateFrame("Frame")
 panel.name = "DemonBrain"
+panel:SetSize(1,1)
 
-panel:SetSize(1, 1) -- necesario para Settings API
-
--- Scroll Container
 local scrollFrame = CreateFrame("ScrollFrame", nil, panel, "UIPanelScrollFrameTemplate")
 scrollFrame:SetPoint("TOPLEFT", 0, -10)
 scrollFrame:SetPoint("BOTTOMRIGHT", -30, 10)
 
--- Contenido interno
 local content = CreateFrame("Frame", nil, scrollFrame)
 content:SetPoint("TOPLEFT", 0, 0)
 content:SetWidth(600)
-content:SetHeight(1200) -- altura virtual amplia
+content:SetHeight(1400)
 
 scrollFrame:SetScrollChild(content)
-
--------------------------------------------------
--- HEADER
--------------------------------------------------
-
-local header = content:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-header:SetPoint("TOPLEFT", 20, -20)
-header:SetText("DemonBrain - Configuración Avanzada")
-
-local sub = content:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-sub:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -5)
-sub:SetText("Control inteligente para Brujo Demonología")
 
 -------------------------------------------------
 -- FUNCIÓN PARA SECCIONES
@@ -102,26 +178,88 @@ local function CreateSection(parent, title, width, height)
     f.title = t
     return f
 end
+-------------------------------------------------
+-- HEADER
+-------------------------------------------------
+
+header = content:CreateFontString(nil,"ARTWORK","GameFontNormalLarge")
+header:SetPoint("TOPLEFT",20,-20)
+header:SetText(GetLocaleTable().TITLE)
+
+sub = content:CreateFontString(nil,"ARTWORK","GameFontHighlightSmall")
+sub:SetPoint("TOPLEFT",header,"BOTTOMLEFT",0,-5)
+sub:SetText(GetLocaleTable().SUBTITLE)
+
+-------------------------------------------------
+-- LANGUAGE SECTION (Styled)
+-------------------------------------------------
+
+local langSection = CreateSection(content, GetLocaleTable().SECTION_LANG, 520, 140)
+    langSection:SetPoint("TOPLEFT", sub, "BOTTOMLEFT", -10, -20)
+
+    langDesc = langSection:CreateFontString(nil,"ARTWORK","GameFontHighlightSmall")
+    langDesc:SetPoint("TOPLEFT",langSection.title,"BOTTOMLEFT",0,-8)
+    langDesc:SetWidth(480)
+    langDesc:SetJustifyH("LEFT")
+    langDesc:SetText(GetLocaleTable().LANG_DESC)
+
+    langDropdown = CreateFrame("Frame","DemonBrainLangDropdown",langSection,"UIDropDownMenuTemplate")
+    langDropdown:SetPoint("TOPLEFT",langDesc,"BOTTOMLEFT",-15,-10)
+    UIDropDownMenu_SetWidth(langDropdown,200)
+
+    local function RefreshTexts()
+        header:SetText(GetLocaleTable().TITLE)
+        sub:SetText(GetLocaleTable().SUBTITLE)
+    end
+
+   local function SetLanguage(lang)
+        DemonBrain_SetLanguage(lang)
+        RefreshAllTexts()
+    end
+
+    UIDropDownMenu_Initialize(langDropdown,function(self,level)
+        local L = GetLocaleTable()
+
+        local function Add(text,lang)
+            local info = UIDropDownMenu_CreateInfo()
+            info.text = text
+            info.func = function()
+                SetLanguage(lang)
+                UIDropDownMenu_SetText(langDropdown, text)
+            end
+            UIDropDownMenu_AddButton(info)
+        end
+
+        Add(L.LANGUAGE_EN,"enUS")
+        Add(L.LANGUAGE_ES,"esES")
+    end)
+        reloadBtn = CreateFrame("Button", nil, langSection, "UIPanelButtonTemplate")
+        reloadBtn:SetSize(140, 22)
+        reloadBtn:SetPoint("TOPLEFT", langDropdown, "BOTTOMLEFT", 20, -10)
+        reloadBtn:SetText(GetLocaleTable().RELOAD_BUTTON)
+
+        reloadBtn:SetScript("OnClick", function()
+            ReloadUI()
+        end)
+   
+
+
 
 -------------------------------------------------
 -- SECCIÓN TIRANO
 -------------------------------------------------
 
-local tyrantSection = CreateSection(content,"Invocar Tirano Demoníaco",520,180)
-tyrantSection:SetPoint("TOPLEFT",sub,"BOTTOMLEFT",-10,-20)
+tyrantSection = CreateSection(content,GetLocaleTable().SECTION_TYRANT,520,180)
+-- CORRECCIÓN: ahora anclado debajo del idioma
+tyrantSection:SetPoint("TOPLEFT",langSection,"BOTTOMLEFT",0,-20)
 
-local tyrantDesc = tyrantSection:CreateFontString(nil,"ARTWORK","GameFontHighlightSmall")
+tyrantDesc = tyrantSection:CreateFontString(nil,"ARTWORK","GameFontHighlightSmall")
 tyrantDesc:SetPoint("TOPLEFT",tyrantSection.title,"BOTTOMLEFT",0,-8)
 tyrantDesc:SetWidth(480)
 tyrantDesc:SetJustifyH("LEFT")
-tyrantDesc:SetText(
-"Define el número mínimo de demonios activos antes de recomendar Tirano.\n\n"..
-"• Valores bajos → Uso más frecuente.\n"..
-"• Valores altos → Ventanas de daño más fuertes.\n\n"..
-"Recomendación: Raid 6-8 | Mythic+ 4-6"
-)
+tyrantDesc:SetText(GetLocaleTable().TYRANT_DESC)
 
-local thresholdSlider = CreateFrame("Slider",nil,tyrantSection,"OptionsSliderTemplate")
+thresholdSlider = CreateFrame("Slider",nil,tyrantSection,"OptionsSliderTemplate")
 thresholdSlider:SetPoint("TOPLEFT",tyrantDesc,"BOTTOMLEFT",0,-25)
 thresholdSlider:SetMinMaxValues(2,12)
 thresholdSlider:SetValueStep(1)
@@ -129,52 +267,45 @@ thresholdSlider:SetObeyStepOnDrag(true)
 thresholdSlider:SetWidth(300)
 thresholdSlider.Low:SetText("2")
 thresholdSlider.High:SetText("12")
+
 thresholdSlider.Text = thresholdSlider:CreateFontString(nil,"ARTWORK","GameFontHighlight")
 thresholdSlider.Text:SetPoint("TOP", thresholdSlider, "BOTTOM", 0, -2)
+
 thresholdSlider:SetScript("OnValueChanged",function(self,value)
     local config = GetConfig()
     if not config then return end
     value = math.floor(value+0.5)
     config.tyrantDemonThreshold = value
-    self.Text:SetText("Demonios requeridos: "..value)
+    self.Text:SetText(GetLocaleTable().SLIDER_DEMONS.." "..value)
 end)
 
 -------------------------------------------------
 -- SECCIÓN BURST
 -------------------------------------------------
 
-local burstSection = CreateSection(content,"Modos de Burst",520,240)
+burstSection = CreateSection(content,GetLocaleTable().SECTION_BURST,520,240)
 burstSection:SetPoint("TOPLEFT",tyrantSection,"BOTTOMLEFT",0,-20)
 
-local burstDesc = burstSection:CreateFontString(nil,"ARTWORK","GameFontHighlightSmall")
+burstDesc = burstSection:CreateFontString(nil,"ARTWORK","GameFontHighlightSmall")
 burstDesc:SetPoint("TOPLEFT",burstSection.title,"BOTTOMLEFT",0,-8)
 burstDesc:SetWidth(480)
 burstDesc:SetJustifyH("LEFT")
-burstDesc:SetText(
-"Modo Normal:\n"..
-"• Usa el umbral configurado.\n"..
-"• Rotación equilibrada.\n\n"..
-"Burst Manual:\n"..
-"• Tirano prioridad absoluta.\n"..
-"• Ideal para heroísmo o sincronización.\n\n"..
-"Burst Automático:\n"..
-"• Se activa solo contra elites o bosses.\n"..
-"• Comportamiento normal contra enemigos comunes."
-)
+burstDesc:SetText(GetLocaleTable().BURST_DESC)
+
 
 local burstDropdown = CreateFrame("Frame","DemonBrainBurstDropdown",burstSection,"UIDropDownMenuTemplate")
 burstDropdown:SetPoint("TOPLEFT",burstDesc,"BOTTOMLEFT",-15,-10)
 UIDropDownMenu_SetWidth(burstDropdown,280)
 
-local function SetBurstMode(mode)
+function DemonBrain_SetBurstMode(mode)
     local config = GetConfig()
     if not config then return end
     config.burstMode = mode
-
+    local L = GetLocaleTable()
     local map = {
-        normal="Modo Normal",
-        manual="Burst Manual",
-        auto="Burst Automático"
+        normal=L.MODE_NORMAL,
+        manual=L.MODE_MANUAL,
+        auto=L.MODE_AUTO
     }
 
     UIDropDownMenu_SetText(burstDropdown,map[mode])
@@ -184,31 +315,30 @@ UIDropDownMenu_Initialize(burstDropdown,function(self,level)
     local function Add(text,mode)
         local info = UIDropDownMenu_CreateInfo()
         info.text = text
-        info.func = function() SetBurstMode(mode) end
+        info.func = function() DemonBrain_SetBurstMode(mode) end
         UIDropDownMenu_AddButton(info)
     end
-    Add("Modo Normal","normal")
-    Add("Burst Manual","manual")
-    Add("Burst Automático (Elite/Boss)","auto")
+    local L = GetLocaleTable()
+
+    Add(L.MODE_NORMAL,"normal")
+    Add(L.MODE_MANUAL,"manual")
+    Add(L.MODE_AUTO,"auto")
 end)
 
 -------------------------------------------------
 -- SECCIÓN UI
 -------------------------------------------------
 
-local uiSection = CreateSection(content,"Interfaz y Apariencia",520,200)
+uiSection = CreateSection(content,GetLocaleTable().SECTION_UI,520,200)
 uiSection:SetPoint("TOPLEFT",burstSection,"BOTTOMLEFT",0,-20)
 
-local uiDesc = uiSection:CreateFontString(nil,"ARTWORK","GameFontHighlightSmall")
+uiDesc = uiSection:CreateFontString(nil,"ARTWORK","GameFontHighlightSmall")
 uiDesc:SetPoint("TOPLEFT",uiSection.title,"BOTTOMLEFT",0,-8)
 uiDesc:SetWidth(480)
 uiDesc:SetJustifyH("LEFT")
-uiDesc:SetText(
-"Personaliza el tamaño y la opacidad del icono de sugerencia.\n"..
-"Puedes ocultarlo temporalmente desde el botón del minimapa."
-)
+uiDesc:SetText(GetLocaleTable().UI_DESC)
 
-local sizeSlider = CreateFrame("Slider",nil,uiSection,"OptionsSliderTemplate")
+sizeSlider = CreateFrame("Slider",nil,uiSection,"OptionsSliderTemplate")
 sizeSlider:SetPoint("TOPLEFT",uiDesc,"BOTTOMLEFT",0,-25)
 sizeSlider:SetMinMaxValues(40,150)
 sizeSlider:SetValueStep(1)
@@ -221,11 +351,11 @@ sizeSlider:SetScript("OnValueChanged",function(self,value)
     if not config then return end
     value = math.floor(value+0.5)
     config.iconSize = value
-    self.Text:SetText("Tamaño del Icono: "..value)
+    self.Text:SetText(GetLocaleTable().SLIDER_SIZE.." "..value)
     RefreshUI()
 end)
 
-local alphaSlider = CreateFrame("Slider",nil,uiSection,"OptionsSliderTemplate")
+alphaSlider = CreateFrame("Slider",nil,uiSection,"OptionsSliderTemplate")
 alphaSlider:SetPoint("TOPLEFT",sizeSlider,"BOTTOMLEFT",0,-60)
 alphaSlider:SetMinMaxValues(0.2,1)
 alphaSlider:SetValueStep(0.05)
@@ -237,20 +367,40 @@ alphaSlider:SetScript("OnValueChanged",function(self,value)
     local config = GetConfig()
     if not config then return end
     config.iconAlpha = value
-    self.Text:SetText(string.format("Opacidad: %.2f",value))
+    self.Text:SetText(GetLocaleTable().SLIDER_ALPHA.." "..string.format("%.2f",value))
     RefreshUI()
 end)
 
 -------------------------------------------------
 -- ALTURA DINÁMICA REAL
 -------------------------------------------------
-panel:SetScript("OnShow", function()
+--[[panel:SetScript("OnShow", function()
     local bottom = uiSection:GetBottom()
     local top = content:GetTop()
     if bottom and top then
         content:SetHeight(top - bottom + 40)
     end
+    RefreshAllTexts()
+end)--]]
+
+panel:SetScript("OnShow", function()
+
+    local config = GetConfig()
+    if config then
+        EnsureDefaults(config)
+    end
+
+    SyncSettings()        -- 👈 ESTA LÍNEA FALTABA
+    RefreshAllTexts()
+
+    local bottom = uiSection:GetBottom()
+    local top = content:GetTop()
+    if bottom and top then
+        content:SetHeight(top - bottom + 40)
+    end
+
 end)
+
 -------------------------------------------------
 -- REGISTRO SETTINGS
 -------------------------------------------------
@@ -258,11 +408,19 @@ end)
 local category = Settings.RegisterCanvasLayoutCategory(panel,"DemonBrain")
 Settings.RegisterAddOnCategory(category)
 
-local function SyncSettings()
+function SyncSettings()
     local config = GetConfig()
     if not config then return end
     EnsureDefaults(config)
+    local L = GetLocaleTable()
+    local currentLang = DemonBrainDB and DemonBrainDB.language or "enUS"
 
+    if currentLang == "esES" then
+        UIDropDownMenu_SetText(langDropdown, L.LANGUAGE_ES)
+    else
+        UIDropDownMenu_SetText(langDropdown, L.LANGUAGE_EN)
+    end
+       
     thresholdSlider:SetValue(config.tyrantDemonThreshold)
     thresholdSlider.Text:SetText("Demonios requeridos: "..config.tyrantDemonThreshold)
 
@@ -272,7 +430,7 @@ local function SyncSettings()
     alphaSlider:SetValue(config.iconAlpha)
     alphaSlider.Text:SetText(string.format("Opacidad: %.2f",config.iconAlpha))
 
-    SetBurstMode(config.burstMode)
+   DemonBrain_SetBurstMode(config.burstMode)
 end
 
 local initFrame = CreateFrame("Frame")
@@ -395,21 +553,25 @@ minimapFrame:SetScript("OnEvent",function()
         end)
 
         btn:SetScript("OnEnter",function(self)
+
+            local L = GetLocaleTable()
+
             GameTooltip:SetOwner(self,"ANCHOR_LEFT")
             GameTooltip:AddLine("DemonBrain",1,0.82,0)
             GameTooltip:AddLine(" ")
-            GameTooltip:AddLine("Click Izquierdo: Configuración")
-            GameTooltip:AddLine("Click Derecho: Ocultar Icono")
-            GameTooltip:AddLine("Shift + Click: Cambiar modo")
+            GameTooltip:AddLine(L.MINIMAP_LEFT)
+            GameTooltip:AddLine(L.MINIMAP_RIGHT)
+            GameTooltip:AddLine(L.MINIMAP_SHIFT)
             GameTooltip:AddLine(" ")
+
+            local config = GetConfig()
             local modeText = {
-                normal = "Modo Normal",
-                manual = "Burst Manual",
-                auto   = "Burst Automático"
+                normal = L.MODE_NORMAL,
+                manual = L.MODE_MANUAL,
+                auto   = L.MODE_AUTO
             }
 
-            GameTooltip:AddLine("Modo actual: "..modeText[config.burstMode],0,1,0)
-          --  GameTooltip:AddLine("Modo actual: "..config.burstMode,0,1,0)
+            GameTooltip:AddLine(L.MINIMAP_CURRENT.." "..(modeText[config.burstMode] or ""),0,1,0)
             GameTooltip:Show()
         end)
 
